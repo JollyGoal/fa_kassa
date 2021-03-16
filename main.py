@@ -44,12 +44,12 @@ async def update_user(user_id: int, user: UserInPydantic):
 
 
 """УДАЛЕНИЕ ЮЗЕРА"""
-@app.delete("/user/{user_id}", response_model=schemas.Status, responses={404: {"model": HTTPNotFoundError}})
+@app.delete("/user/{user_id}", response_model=Status, responses={404: {"model": HTTPNotFoundError}})
 async def delete_user(user_id: int):
     deleted_count = await User.filter(id=user_id).delete()
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
-    return schemas.Status(message=f"Deleted user {user_id}")
+    return Status(message=f"Deleted user {user_id}")
 
 ######################################################################################################
                                              ##PRODUCTS##
@@ -87,12 +87,12 @@ async def update_item(item_id: int, item: ItemInPydantic):
 
 
 """УДАЛЕНИЕ ПРОДУКТА ПО ID"""
-@app.delete("/item/{item_id}", response_model=schemas.Status, responses={404: {"model": HTTPNotFoundError}})
+@app.delete("/item/{item_id}", response_model=Status, responses={404: {"model": HTTPNotFoundError}})
 async def delete_item(item_id: int):
     deleted_count = await Item.filter(id=item_id).delete()
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"Item {item_id} not found")
-    return schemas.Status(message=f"Deleted item {item_id}")
+    return Status(message=f"Deleted item {item_id}")
 
 ######################################################################################################
 register_tortoise(
