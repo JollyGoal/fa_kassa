@@ -32,7 +32,7 @@ class Item(models.Model):
     quantity = fields.IntField()
     date = fields.DatetimeField()
     # image = fields.BinaryField()
-    # owner = fields.ForeignKeyField('models.User', related_name='items')
+    # owner = fields.ForeignKeyField('models.User', related_name='item')
 
     def min_price(self) -> float:
         return self.price + ((self.price * self.min_per)/100)
@@ -55,6 +55,6 @@ UserPydanticList = pydantic_queryset_creator(User)
 
 
 """Продукт"""
-ItemPydantic = pydantic_model_creator(Item, name="Items", include=('id',))
+ItemPydantic = pydantic_model_creator(Item, name="Items")
 ItemInPydantic = pydantic_model_creator(Item, name="ItemsIn", exclude_readonly=True)
 ItemPydanticList = pydantic_queryset_creator(Item)
