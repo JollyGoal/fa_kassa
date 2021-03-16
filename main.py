@@ -3,9 +3,8 @@ from typing import List
 import uvicorn as uvicorn
 from fastapi import FastAPI, HTTPException
 from tortoise.contrib.fastapi import register_tortoise, HTTPNotFoundError
-import schemas
 from models import UserPydantic, User, UserInPydantic, UserPydanticList, Item,\
-    ItemPydantic, ItemInPydantic, ItemPydanticList
+    ItemPydantic, ItemInPydantic, ItemPydanticList, Status
 
 app = FastAPI()
 
