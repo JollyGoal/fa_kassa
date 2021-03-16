@@ -1,101 +1,107 @@
-import urllib
-import os
-import math
-
-host_server = os.environ.get('host_server', 'localhost')
-db_server_port = urllib.parse.quote_plus(str(os.environ.get('db_server_port', '5432')))
-database_name = os.environ.get('database_name', 'fa_kassa')
-db_username = urllib.parse.quote_plus(str(os.environ.get('db_username', 'postgres')))
-db_password = urllib.parse.quote_plus(str(os.environ.get('db_password', 'root')))
-ssl_mode = urllib.parse.quote_plus(str(os.environ.get('ssl_mode', 'prefer')))
-DATABASE_URL = 'postgresql://{}:{}@{}:{}/{}?sslmode={}'.format(db_username, db_password, host_server,
-                                                               db_server_port, database_name, ssl_mode)
-
-import sqlalchemy
-
-metadata = sqlalchemy.MetaData()
-
-products = sqlalchemy.Table(
-    "products",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column("name", sqlalchemy.String),
-    sqlalchemy.Column("price", sqlalchemy.Integer),
-    sqlalchemy.Column("quantity", sqlalchemy.Integer),
-    sqlalchemy.Column("percent", sqlalchemy.Integer),
-)
-
-engine = sqlalchemy.create_engine(
-    DATABASE_URL, pool_size=10, max_overflow=0
-)
-
-metadata.create_all(engine)
-
-from pydantic import BaseModel
-from datetime import datetime
-
-class ProductIn(BaseModel):
-    name: str
-    text: str
-    percent: int = None
-    price: float
-    quantity: int
-
-
-class Products(BaseModel):
-    id: int
-    name: str
-    text: str
-    # image:
-    percent: int = None
-    price: float
-    quantity: int
-    date: datetime
-
-from fastapi import FastAPI, Depends, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
-app = FastAPI(title="using FastAPI PostgreSQL Async EndPoints")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+import uvicorn as uvicorn
+from fastapi import FastAPI, HTTPException
+from tortoise.contrib.fastapi import register_tortoise, HTTPNotFoundError
+import schemas
+from models import UserPydantic, User, UserInPydantic, UserPydanticList, Item,\
+    ItemPydantic, ItemInPydantic, ItemPydanticList
+
+app = FastAPI()
+
+
+######################################################################################################
+                                             ##USERS##
+
+
+"""СПИСОК ЮЗЕРОВ"""
+@app.get("/users", response_model=List[UserPydantic])
+async def get_users():
+    return await UserPydantic.from_queryset(User.all())
+
+
+"""СОЗДАНИЕ ЮЗЕРА"""
+@app.post("/users", response_model=UserPydantic)
+async def create_user(user: UserInPydantic):
+    user_obj = await User.create(**user.dict(exclude_unset=True))
+    return await UserPydantic.from_tortoise_orm(user_obj)
+
+
+"""ПОИСК ЮЗЕРА ПО ID"""
+@app.get(
+    "/user/{user_id}", response_model=UserPydantic, responses={404: {"model": HTTPNotFoundError}}
 )
-
-import databases
-from sqlalchemy.orm import Session
-
-database = databases.Database(DATABASE_URL)
-
-from starlette.requests import Request
+async def get_user(user_id: int):
+    return await UserPydantic.from_queryset_single(User.get(id=user_id))
 
 
-def get_db(request: Request):
-    return request.state.db
-
-@app.on_event("startup")
-async def startup():
-    await database.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await database.disconnect()
+"""ИЗМЕНЕНИЕ ЮЗЕРА ПО ID"""
+@app.post(
+    "/user/{user_id}", response_model=UserPydantic, responses={404: {"model": HTTPNotFoundError}}
+)
+async def update_user(user_id: int, user: UserInPydantic):
+    await User.filter(id=user_id).update(**user.dict(exclude_unset=True))
+    return await UserPydantic.from_queryset_single(User.get(id=user_id))
 
 
-@app.get("/prod", response_model=List[Products])
-async def list_prod(product: Session = Depends(get_db)):
-    return list_prod(product)
+"""УДАЛЕНИЕ ЮЗЕРА"""
+@app.delete("/user/{user_id}", response_model=schemas.Status, responses={404: {"model": HTTPNotFoundError}})
+async def delete_user(user_id: int):
+    deleted_count = await User.filter(id=user_id).delete()
+    if not deleted_count:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+    return schemas.Status(message=f"Deleted user {user_id}")
+
+######################################################################################################
+                                             ##PRODUCTS##
 
 
-@app.post("/prod", response_model=Products)
-async def create_prod(product: ProductIn = File(...)):
-    query = products.insert().values(text=product.name)
-    last_record_id = await database.execute(query)
-    # product_dict = product.dict()
-    # if product.percent:
-    #     price_with_percent = product.price + (product.percent*0.01)
-    #     product_dict.update({"price_with_percent": price_with_percent})
-    return {**product.dict(), "id": last_record_id}
+"""СПИСОК ПРОДУКТОВ"""
+@app.get("/items", response_model=List[ItemPydantic])
+async def get_items():
+    return await ItemPydantic.from_queryset(Item.all())
+
+
+"""СОЗДАНИЕ ПРОДУКТА"""
+@app.post("/items", response_model=ItemPydantic)
+async def create_item(item: ItemInPydantic):
+    item_obj = await Item.create(**item.dict(exclude_unset=True))
+    return await ItemPydantic.from_tortoise_orm(item_obj)
+
+
+"""ПОИСК ПРОДУКТА ПО ID"""
+@app.get(
+    "/item/{item_id}", response_model=ItemPydantic, responses={404: {"model": HTTPNotFoundError}}
+)
+async def get_item(item_id: int):
+    query = Item.get(id=item_id)
+    return await ItemPydantic.from_queryset_single(query)
+
+
+"""ИЗМЕНЕНИЕ ПРОДУКТА ПО ID"""
+@app.post(
+    "/item/{item_id}", response_model=ItemPydantic, responses={404: {"model": HTTPNotFoundError}}
+)
+async def update_item(item_id: int, item: ItemInPydantic):
+    await Item.filter(id=item_id).update(**item.dict(exclude_unset=True))
+    return await ItemPydantic.from_queryset_single(Item.get(id=item_id))
+
+
+"""УДАЛЕНИЕ ПРОДУКТА ПО ID"""
+@app.delete("/item/{item_id}", response_model=schemas.Status, responses={404: {"model": HTTPNotFoundError}})
+async def delete_item(item_id: int):
+    deleted_count = await Item.filter(id=item_id).delete()
+    if not deleted_count:
+        raise HTTPException(status_code=404, detail=f"Item {item_id} not found")
+    return schemas.Status(message=f"Deleted item {item_id}")
+
+######################################################################################################
+register_tortoise(
+    app,
+    db_url="sqlite://sql_app.db",
+    modules={"models": ["models"], "aerich.models": ["models"]},
+    generate_schemas=True,
+    add_exception_handlers=True,
+)
+if __name__ == "__main__":
+    uvicorn.run(app, host="localhost", port=8000)
