@@ -10,15 +10,13 @@ class User(models.Model):
     """Модель пользователя"""
     id = fields.IntField(pk=True)
     email = fields.CharField(max_length=100, unique=True)
-    hashed_password = fields.CharField(max_length=1000)
+    password = fields.CharField(max_length=100)
+    first_name = fields.CharField(max_length=100)
+    last_name = fields.CharField(max_length=100, null=True)
+    date_join = fields.DatetimeField(auto_now_add=True)
     is_active = fields.BooleanField(default=True)
 
-    async def save(self, *args, **kwargs) -> None:
-        self.hashed_password = "123456"
-        await super().save(*args, **kwargs)
-
-    class PydanticMeta:
-        exclude = ['hashed_password']
+    items: fields.ReverseRelation["Item"]
 
 
 class Item(models.Model):
@@ -32,7 +30,9 @@ class Item(models.Model):
     quantity = fields.IntField()
     date = fields.DatetimeField()
     # image = fields.BinaryField()
-    # owner = fields.ForeignKeyField('models.User', related_name='item')
+    owner: fields.ForeignKeyRelation['User'] = fields.ForeignKeyField(
+        'models.User', related_name='items'
+    )
 
     def min_price(self) -> float:
         return self.price + ((self.price * self.min_per)/100)
@@ -52,6 +52,7 @@ class Item(models.Model):
 UserPydantic = pydantic_model_creator(User, name="User")
 UserInPydantic = pydantic_model_creator(User, name="UserIn", exclude_readonly=True)
 UserPydanticList = pydantic_queryset_creator(User)
+UserInPydanticList = pydantic_queryset_creator(User, include=('id',))
 
 
 """Продукт"""

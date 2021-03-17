@@ -4,7 +4,7 @@ import uvicorn as uvicorn
 from fastapi import FastAPI, HTTPException
 from tortoise.contrib.fastapi import register_tortoise, HTTPNotFoundError
 from models import UserPydantic, User, UserInPydantic, UserPydanticList, Item,\
-    ItemPydantic, ItemInPydantic, ItemPydanticList, Status
+    ItemPydantic, ItemInPydantic, ItemPydanticList, Status, UserInPydanticList
 
 app = FastAPI()
 
