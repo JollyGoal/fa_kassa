@@ -1,6 +1,7 @@
 venv
 .idea
 __pycache__
+media
 sql_app.db
 sql_app.db-shm
 sql_app.db-wal

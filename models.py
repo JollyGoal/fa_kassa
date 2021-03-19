@@ -16,23 +16,23 @@ class User(models.Model):
     date_join = fields.DatetimeField(auto_now_add=True)
     is_active = fields.BooleanField(default=True)
 
-    items: fields.ReverseRelation["Item"]
+    # items: fields.ReverseRelation["Item"]
 
 
 class Item(models.Model):
     """Модель items"""
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=100, unique=True)
+    name = fields.CharField(max_length=100)
     description = fields.TextField(null=True)
     min_per = fields.IntField()
     max_per = fields.IntField()
     price = fields.FloatField()
     quantity = fields.IntField()
     date = fields.DatetimeField()
-    # image = fields.BinaryField()
-    owner: fields.ForeignKeyRelation['User'] = fields.ForeignKeyField(
-        'models.User', related_name='items'
-    )
+    # image = fields.CharField(max_length=1000)
+    # owner: fields.ForeignKeyRelation['User'] = fields.ForeignKeyField(
+    #     'models.User', related_name='items'
+    # )
 
     def min_price(self) -> float:
         return self.price + ((self.price * self.min_per)/100)
